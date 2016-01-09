@@ -65,7 +65,6 @@ class I:
     def merge(self, xs, ys):
         cs = []
         ix = iy = 0
-        print("merging", xs, ys)
         while ix < len(xs) and iy < len(ys):
             cndx, cndy = xs[ix], ys[iy]
             if cndx.doc_id < cndy.doc_id:
@@ -83,10 +82,10 @@ class I:
         return cs
 
     def translate_docs(self, result, records):
-        return [
-            (records[cnd.doc_id], cnd.min_dist)
+        return sorted(
+            (cnd.min_dist, records[cnd.doc_id])
             for cnd in result
-        ]
+        )
 
 
 
@@ -111,5 +110,5 @@ if __name__ == "__main__":
 
     x = I()
     x.index(records)
-    y = x.find("hodine seste")
+    y = x.find("na po")
     print("found:", x.translate_docs(y, records))
