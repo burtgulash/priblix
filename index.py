@@ -152,13 +152,14 @@ class Index:
             if start <= hlend:
                 hlend = end
             else:
-                result.append( (hlstart, hlend) )
+                if hlend > hlstart:
+                    result.append( (hlstart, hlend) )
                 hlstart, hlend = start, end
 
         # also include the last one
         result.append( (hlstart, hlend) )
 
-        return highlights
+        return result
 
     def _highlight_record(self, record, highlights):
         normal = "\033[m"
@@ -212,6 +213,6 @@ if __name__ == "__main__":
     ]
 
     index = Index(records)
-    found = index.search("se to")
+    found = index.search("se se to")
     for score, f in found:
         print(score, f)
