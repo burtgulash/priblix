@@ -6,7 +6,7 @@ import sys
 
 class Iurl(a.I):
     def tokenize(self, record):
-        ws = [w for w in re.split("[_/.?+\-&:\W]+|(\d+)", record) if w]
+        ws = [w for w in re.split("[-_/.?+&:\W]+|(\d+)", record) if w]
         return ws
 
 

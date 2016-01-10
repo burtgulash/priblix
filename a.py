@@ -107,9 +107,39 @@ class I:
 
         return cs
 
+    def merge_highlights(self, highlights):
+        highlights = sorted(highlights)
+        result = []
+        hlstart, hlend = 0, 0
+        for start, end in highlights:
+            if start <= hlend:
+                hlend = end
+            else:
+                result.append( (hlstart, hlend) )
+                hlstart, hlend = start, end
+
+        # also include the last one
+        result.append( (hlstart, hlend) )
+
+        return highlights
+
+    def highlight_record(self, record, highlights):
+        normal = "\033[m"
+        bold = "\033[1m"
+
+        yellow_back = "\033[103m"
+        normal_back = "\033[49m"
+
+        result = []
+        for start, end in highlights:
+            result.append(record[:start])
+            result.append(yellow_back + record[start:end] + normal_back)
+        result.append(record[end:])
+        return "".join(result)
+
     def translate_docs(self, result, records):
         return sorted(
-            (cnd.min_dist, records[cnd.doc_id])
+            (cnd.min_dist, self.highlight_record(records[cnd.doc_id], cnd.highlights))
             for cnd in result
         )
 
