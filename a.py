@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import collections
+import re
 
 class Candidate:
     def __init__(self, doc_id, word_occurrences):
@@ -11,16 +12,17 @@ class Candidate:
     def __repr__(self):
         return "Candidate({}, {}, {})".format(self.doc_id, self.min_dist, self.last_occurrences)
 
-def groupped_occurrences(occurrences):
-    d = collections.defaultdict(list)
-    for word, pos in occurrences:
-        d[word].append(pos)
-    return d
+class RecordPosition:
+    def __init__(self, char_position, word_position):
+        self.char_position = char_position
+        self.word_position = word_position
 
 def min_dist(xpositions, ypositions):
-    m = 1000
+    m = 1337
     for x in xpositions:
+        x = x.word_position
         for y in ypositions:
+            y = y.word_position
             if x < y:
                 if y - x - 1 < m:
                     m = y - x - 1
@@ -35,29 +37,45 @@ class I:
     def __init__(self):
         self._index = collections.defaultdict(list)
 
-    def analyse(self, record):
-        words = record.split(" ")
-        return [(word, pos) for pos, word in enumerate(words)]
+    def tokenize(self, record):
+        words = re.split("\W+", record)
+        return words
+
+    def add_token_offsets(self, record, tokens):
+        terms = []
+        rec_i = 0
+        for tok_i, token in enumerate(tokens):
+            assert rec_i < len(record)
+            while not record[rec_i:].startswith(token):
+                rec_i += 1
+            terms.append( (token, RecordPosition(rec_i, tok_i)) )
+        return terms
+
+    def group_occurrences(self, occurrences):
+        d = collections.defaultdict(list)
+        for word, record_position in occurrences:
+            d[word].append(record_position)
+        return d
 
     def index(self, records):
         for doc_id, record in enumerate(records):
-            occurrences = self.analyse(record)
-            for word, positions in groupped_occurrences(occurrences).items():
-                self._index[word].append((doc_id, sorted(positions)))
+            tokens = self.tokenize(record)
+            occurrences = self.add_token_offsets(record, tokens)
+            for word, record_positions in self.group_occurrences(occurrences).items():
+                self._index[word].append((doc_id, record_positions)) # TODO add compare method to recordpos and sort them. Then change the algorithm for mindist to be linear instead of quadratic
 
     def find_one(self, word):
         docs = self._index.get(word, [])
         return [Candidate(doc_id, positions) for doc_id, positions in docs]
 
     def find(self, query):
-        occurrences = self.analyse(query)
-        if not occurrences:
+        tokens = self.tokenize(query)
+        if not tokens:
             return []
 
-        word, _ = occurrences[0]
-        candidates = self.find_one(word)
-        for word, pos in occurrences[1:]:
-            new_candidates = self.find_one(word)
+        candidates = self.find_one(tokens[0])
+        for token in tokens[1:]:
+            new_candidates = self.find_one(token)
             candidates = self.merge(candidates, new_candidates)
 
         return candidates

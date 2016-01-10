@@ -5,10 +5,9 @@ import re
 import sys
 
 class Iurl(a.I):
-    def analyse(self, record):
+    def tokenize(self, record):
         ws = [w for w in re.split("[_/.?+\-&:\W]+|(\d+)", record) if w]
-        xs = [(word, pos) for pos, word in enumerate(ws)]
-        return xs
+        return ws
 
 
 if __name__ == "__main__":
