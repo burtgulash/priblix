@@ -56,9 +56,10 @@ def min_dist(xpositions, ypositions):
     return d
 
 
-class I:
-    def __init__(self):
-        self._index = collections.defaultdict(list)
+class Index:
+    def __init__(self, records):
+        self.records = records
+        self.index = self._index(records)
 
     def tokenize(self, record):
         words = re.split("\W+", record)
@@ -74,21 +75,29 @@ class I:
             terms.append( (token, RecordPosition(rec_i, tok_i)) )
         return terms
 
-    def group_occurrences(self, occurrences):
+    def search(self, query):
+        candidates = self._find_phrase(query)
+        highlighted_docs = self.retrieve_records_and_highlight(candidates)
+        return sorted(highlighted_docs)
+
+
+    def _group_occurrences(self, occurrences):
         d = collections.defaultdict(list)
         for word, record_position in occurrences:
             d[word].append(record_position)
         return d
 
-    def index(self, records):
+    def _index(self, records):
+        index = collections.defaultdict(list)
         for doc_id, record in enumerate(records):
             tokens = self.tokenize(record)
             occurrences = self.add_token_offsets(record, tokens)
-            for word, record_positions in self.group_occurrences(occurrences).items():
-                self._index[word].append((doc_id, record_positions))
+            for word, record_positions in self._group_occurrences(occurrences).items():
+                index[word].append((doc_id, record_positions))
+        return index
 
-    def find_one(self, word):
-        docs_found = self._index.get(word, [])
+    def _find_one(self, word):
+        docs_found = self.index.get(word, [])
         result = []
         for doc_id, record_positions in docs_found:
             highlights = [
@@ -98,19 +107,19 @@ class I:
             result.append(Candidate(doc_id, record_positions, highlights))
         return result
 
-    def find(self, query):
+    def _find_phrase(self, query):
         tokens = self.tokenize(query)
         if not tokens:
             return []
 
-        candidates = self.find_one(tokens[0])
+        candidates = self._find_one(tokens[0])
         for token in tokens[1:]:
-            new_candidates = self.find_one(token)
-            candidates = self.merge(candidates, new_candidates)
+            new_candidates = self._find_one(token)
+            candidates = self._merge(candidates, new_candidates)
 
         return candidates
 
-    def merge(self, xs, ys):
+    def _merge(self, xs, ys):
         cs = []
         ix = iy = 0
         while ix < len(xs) and iy < len(ys):
@@ -129,7 +138,7 @@ class I:
 
         return cs
 
-    def merge_highlights(self, highlights):
+    def _merge_highlights(self, highlights):
         highlights = sorted(highlights)
         result = []
         hlstart, hlend = 0, 0
@@ -145,7 +154,7 @@ class I:
 
         return highlights
 
-    def highlight_record(self, record, highlights):
+    def _highlight_record(self, record, highlights):
         normal = "\033[m"
         bold = "\033[1m"
 
@@ -161,13 +170,14 @@ class I:
         result.append(record[end:])
         return "".join(result)
 
-    def translate_docs(self, result, records):
+    def retrieve_records_and_highlight(self, candidates):
         r = []
-        for candidate in result:
-            highlights = self.merge_highlights(candidate.highlights)
-            highlighted_record = self.highlight_record(records[candidate.doc_id], highlights)
+        for candidate in candidates:
+            record = self.records[candidate.doc_id]
+            highlights = self._merge_highlights(candidate.highlights)
+            highlighted_record = self._highlight_record(record, highlights)
             r.append( (candidate.min_dist, highlighted_record) )
-        return sorted(r)
+        return r
 
 
 
@@ -190,8 +200,7 @@ if __name__ == "__main__":
         "seste hodine se vysralo tezce",
     ]
 
-    x = I()
-    x.index(records)
-    found = x.translate_docs(x.find("seste hodine"), records)
+    index = Index(records)
+    found = index.search("seste hodine")
     for score, f in found:
         print(score, f)
