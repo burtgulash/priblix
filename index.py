@@ -198,9 +198,32 @@ if __name__ == "__main__":
         "ono je to taky ono auto",
         "neslo se mi tezce ze se mi sralo na mesici v seste",
         "to je mesici se pozde jede a jelo taky",
+        "vysrat se na to",
+        "jelo se mi v seste auto opravit na mesici po nem",
+        "kravate se vysralo taky auto",
+        "tezce se mi sere po silnici",
+        "ono na mesici je auto seste",
+        "podivana na mesici je mimo provoz srani",
+        "taky jsem tezce vstaval kdyz mi sralo auto",
+        "vstavat tezce po ranu a auto u toho",
+        "sestou ranu u hospody na kravate po mesici me nasralo",
+        "jede na mesici auto",
+        "na to bych musel mit taky auto",
+        "musel bych tezce nest hodiny mimo seste",
+        "hodiny a auto me nasralo kdyz jsem sel po mesici na podivanou",
+        "po silnici se spatne sere i jede autem",
+        "ono se i podivame v auto mechanikove silnici",
+        "taky bych musel vstavat a to by se mi neslo po silnici taky tak lehce",
+        "na kravate jsem nasel flek a to me nasralo tak moc, ze z toho byla podivana, ale pozde",
+        "jsem byl srat",
+        "a ty taky",
+        "taky mi to neslo se vysrat, vsichni ze me meli podivanou",
+        "auto autem neni sralo srackou",
+        "tezce bys sral a ja bych auto tezce nesl k silnici",
+        "pak se mi taky vysralo silnici i auto",
     ]
 
     index = Index(records)
-    found = index.search("se se to")
+    found = index.search("taky mi")
     for score, f in found:
         print(score, f)
