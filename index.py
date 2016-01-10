@@ -49,7 +49,10 @@ def min_dist(xpositions, ypositions):
 class Index:
     def __init__(self, records):
         self.records = records
-        self.index = self._index(records)
+        self.index = {}
+        self.edits = trees.bktree.BKTree()
+
+        self._index(records)
 
     def tokenize(self, record):
         words = re.split("\W+", record)
@@ -83,13 +86,14 @@ class Index:
         return d
 
     def _index(self, records):
-        index = collections.defaultdict(list)
         for doc_id, record in enumerate(records):
             tokens = self.tokenize(record)
             occurrences = self.add_token_offsets(record, tokens)
-            for word, record_positions in self._group_occurrences(occurrences).items():
-                index[word].append((doc_id, record_positions))
-        return index
+            for token, record_positions in self._group_occurrences(occurrences).items():
+                if token not in self.index:
+                    self.index[token] = []
+                self.index[token].append((doc_id, record_positions))
+                self.edits.insert(token, trees.bktree.levenshtein)
 
     def _find_one(self, word):
         docs_found = self.index.get(word, [])
