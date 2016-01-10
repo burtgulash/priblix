@@ -25,7 +25,8 @@ class BKNode:
 
     def add_child(self, word, d):
         assert d not in self.children
-        self.children[d] = BKNode(word)
+        if d != 0:
+            self.children[d] = BKNode(word)
 
     def find(self, word, distance_fn, limit):
         d = distance_fn(self.word, word)
@@ -39,7 +40,7 @@ class BKNode:
         print(indent + self.word)
         for d, child in self.children.items():
             print(indent + str(d))
-            child.print(indent + indent)
+            child.print(indent + "  ")
 
 
 class BKTree:
