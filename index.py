@@ -22,7 +22,7 @@ class RecordPosition:
     def __repr__(self):
         return "Pos({}, {})".format(self.char_position, self.word_position)
 
-def min_dist(xpositions, ypositions):
+def min_d(xpositions, ypositions):
     d = 1337
     top, bottom = xpositions, ypositions
     topi, bottomi = 0, 0
@@ -31,19 +31,18 @@ def min_dist(xpositions, ypositions):
     while topi < len(top):
         topx = top[topi].word_position
         bottomx = bottom[bottomi].word_position
-        diff = bottomx - topx
+
+        diff = abs(bottomx - topx) - 1
+        # if first token doesn't precede the second token in the result, add a penalty to the score
+        if (switched and topx < bottomx) or (not switched and topx > bottomx):
+            diff += 1
 
         # increase the top row while its elements are smaller than element at
-        # bottom position. Then swap top and bottom
+        # bottom position. Then swap top and bottom.
         if topx > bottomx:
             top, bottom = bottom, top
             topi, bottomi = bottomi, topi
-            diff = -diff
             switched = not switched
-
-        # if first token doesn't precede the second token in the result, add a penalty to the score
-        if switched:
-            diff += 1
 
         # set min_dist if better found
         if diff < d:
@@ -55,6 +54,28 @@ def min_dist(xpositions, ypositions):
         topi += 1
 
     return d
+
+def min_dist(xpositions, ypositions):
+    d = 1337
+    ix = iy = 0
+    penalty = 1
+    while ix < len(xpositions) and iy < len(ypositions):
+        x = xpositions[ix].word_position
+        y = ypositions[iy].word_position
+        if x < y:
+            diff = y - x - 1
+            ix += 1
+        else:
+            diff = x - y - 1 + penalty
+            iy += 1
+
+        if diff <= 0:
+            return 0
+        if diff < d:
+            d = diff
+
+    return d
+
 
 
 class Index:
@@ -71,14 +92,14 @@ class Index:
 
     def add_token_offsets(self, record, tokens):
         terms = []
-        rec_i = 0
+        char_i = 0
         for tok_i, token in enumerate(tokens):
-            assert rec_i < len(record)
-            while not record[rec_i:].startswith(token):
-                rec_i += 1
+            assert char_i < len(record)
+            while not record[char_i:].startswith(token):
+                char_i += 1
             token = self.filter(token)
-            terms.append( (token, RecordPosition(rec_i, tok_i)) )
-            rec_i += len(token)
+            terms.append( (token, RecordPosition(char_i, tok_i)) )
+            char_i += len(token)
         return terms
 
     def search(self, query):
