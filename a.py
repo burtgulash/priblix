@@ -18,6 +18,9 @@ class RecordPosition:
         self.char_position = char_position
         self.word_position = word_position
 
+    def __repr__(self):
+        return "Position({}, {})".format(self.char_position, self.word_position)
+
 def min_dist(xpositions, ypositions):
     m = 1337
     for x in xpositions:
@@ -63,7 +66,7 @@ class I:
             tokens = self.tokenize(record)
             occurrences = self.add_token_offsets(record, tokens)
             for word, record_positions in self.group_occurrences(occurrences).items():
-                self._index[word].append((doc_id, record_positions)) # TODO add compare method to recordpos and sort them. Then change the algorithm for mindist to be linear instead of quadratic
+                self._index[word].append((doc_id, record_positions))
 
     def find_one(self, word):
         docs_found = self._index.get(word, [])
@@ -131,17 +134,21 @@ class I:
         normal_back = "\033[49m"
 
         result = []
+        last = 0
         for start, end in highlights:
-            result.append(record[:start])
+            result.append(record[last:start])
             result.append(yellow_back + record[start:end] + normal_back)
+            last = end
         result.append(record[end:])
         return "".join(result)
 
     def translate_docs(self, result, records):
-        return sorted(
-            (cnd.min_dist, self.highlight_record(records[cnd.doc_id], cnd.highlights))
-            for cnd in result
-        )
+        r = []
+        for candidate in result:
+            highlights = self.merge_highlights(candidate.highlights)
+            highlighted_record = self.highlight_record(records[candidate.doc_id], highlights)
+            r.append( (candidate.min_dist, highlighted_record) )
+        return sorted(r)
 
 
 
@@ -166,5 +173,6 @@ if __name__ == "__main__":
 
     x = I()
     x.index(records)
-    y = x.find("na po")
-    print("found:", x.translate_docs(y, records))
+    found = x.translate_docs(x.find("seste hodine"), records)
+    for score, f in found:
+        print(score, f)
