@@ -22,39 +22,6 @@ class RecordPosition:
     def __repr__(self):
         return "Pos({}, {})".format(self.char_position, self.word_position)
 
-def min_d(xpositions, ypositions):
-    d = 1337
-    top, bottom = xpositions, ypositions
-    topi, bottomi = 0, 0
-    switched = False
-
-    while topi < len(top):
-        topx = top[topi].word_position
-        bottomx = bottom[bottomi].word_position
-
-        diff = abs(bottomx - topx) - 1
-        # if first token doesn't precede the second token in the result, add a penalty to the score
-        if (switched and topx < bottomx) or (not switched and topx > bottomx):
-            diff += 1
-
-        # increase the top row while its elements are smaller than element at
-        # bottom position. Then swap top and bottom.
-        if topx > bottomx:
-            top, bottom = bottom, top
-            topi, bottomi = bottomi, topi
-            switched = not switched
-
-        # set min_dist if better found
-        if diff < d:
-            # if minimum reached, return it immediately
-            if diff <= 0:
-                return 0
-            d = diff
-
-        topi += 1
-
-    return d
-
 def min_dist(xpositions, ypositions):
     d = 1337
     ix = iy = 0
