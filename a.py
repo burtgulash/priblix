@@ -4,10 +4,11 @@ import collections
 import re
 
 class Candidate:
-    def __init__(self, doc_id, word_occurrences):
+    def __init__(self, doc_id, word_occurrences, highlights):
         self.doc_id = doc_id
         self.last_occurrences = word_occurrences
         self.min_dist = 0
+        self.highlights = highlights
 
     def __repr__(self):
         return "Candidate({}, {}, {})".format(self.doc_id, self.min_dist, self.last_occurrences)
@@ -65,8 +66,15 @@ class I:
                 self._index[word].append((doc_id, record_positions)) # TODO add compare method to recordpos and sort them. Then change the algorithm for mindist to be linear instead of quadratic
 
     def find_one(self, word):
-        docs = self._index.get(word, [])
-        return [Candidate(doc_id, positions) for doc_id, positions in docs]
+        docs_found = self._index.get(word, [])
+        result = []
+        for doc_id, record_positions in docs_found:
+            highlights = [
+                (rp.char_position, rp.char_position + len(word))
+                for rp in record_positions
+            ]
+            result.append(Candidate(doc_id, record_positions, highlights))
+        return result
 
     def find(self, query):
         tokens = self.tokenize(query)
@@ -92,7 +100,7 @@ class I:
             else:
                 xpositions = cndx.last_occurrences
                 ypositions = cndy.last_occurrences
-                c = Candidate(cndx.doc_id, ypositions)
+                c = Candidate(cndx.doc_id, ypositions, cndx.highlights + cndy.highlights)
                 c.min_dist = cndx.min_dist + min_dist(xpositions, ypositions)
                 cs.append(c)
                 ix, iy = ix + 1, iy + 1
