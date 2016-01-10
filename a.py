@@ -3,6 +3,7 @@
 import collections
 import re
 
+
 class Candidate:
     def __init__(self, doc_id, word_occurrences, highlights):
         self.doc_id = doc_id
@@ -11,7 +12,7 @@ class Candidate:
         self.highlights = highlights
 
     def __repr__(self):
-        return "Candidate({}, {}, {})".format(self.doc_id, self.min_dist, self.last_occurrences)
+        return "Cand({}, {}, {})".format(self.doc_id, self.min_dist, self.last_occurrences)
 
 class RecordPosition:
     def __init__(self, char_position, word_position):
@@ -19,7 +20,7 @@ class RecordPosition:
         self.word_position = word_position
 
     def __repr__(self):
-        return "Position({}, {})".format(self.char_position, self.word_position)
+        return "Pos({}, {})".format(self.char_position, self.word_position)
 
 def min_dist(xpositions, ypositions):
     d = 1337
@@ -73,6 +74,7 @@ class Index:
             while not record[rec_i:].startswith(token):
                 rec_i += 1
             terms.append( (token, RecordPosition(rec_i, tok_i)) )
+            rec_i += len(token)
         return terms
 
     def search(self, query):
@@ -198,9 +200,14 @@ if __name__ == "__main__":
         "neslo se vysrat mimo silnici",
         "tak to v seste hodine taky",
         "seste hodine se vysralo tezce",
+        "po mesici tezce vysralo sestou",
+        "na sestou se podivame na auto, to bude podivana",
+        "ono je to taky ono auto",
+        "neslo se mi tezce ze se mi sralo na mesici v seste",
+        "to je mesici se pozde jede a jelo taky",
     ]
 
     index = Index(records)
-    found = index.search("seste hodine")
+    found = index.search("se to")
     for score, f in found:
         print(score, f)
