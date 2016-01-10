@@ -2,6 +2,7 @@
 
 import collections
 import re
+import trees.bktree
 
 
 class Candidate:
