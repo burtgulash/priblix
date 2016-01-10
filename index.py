@@ -66,6 +66,9 @@ class Index:
         words = re.split("\W+", record)
         return words
 
+    def filter(self, token):
+        return token.lower()
+
     def add_token_offsets(self, record, tokens):
         terms = []
         rec_i = 0
@@ -73,6 +76,7 @@ class Index:
             assert rec_i < len(record)
             while not record[rec_i:].startswith(token):
                 rec_i += 1
+            token = self.filter(token)
             terms.append( (token, RecordPosition(rec_i, tok_i)) )
             rec_i += len(token)
         return terms
