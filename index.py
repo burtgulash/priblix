@@ -7,6 +7,8 @@ from trees.trie import Trie
 
 
 class Candidate:
+    __slots__ = "doc_id", "edit_distance", "last_occurrences", "min_dist", "highlights"
+
     def __init__(self, doc_id, edit_distance, word_occurrences, highlights):
         self.doc_id = doc_id
         self.edit_distance = edit_distance
@@ -14,16 +16,12 @@ class Candidate:
         self.min_dist = 0
         self.highlights = highlights
 
-    def __repr__(self):
-        return "Cand({}, {}, {})".format(self.doc_id, self.min_dist, self.last_occurrences)
-
 class RecordPosition:
+    __slots__ = "char_position", "word_position"
+
     def __init__(self, char_position, word_position):
         self.char_position = char_position
         self.word_position = word_position
-
-    def __repr__(self):
-        return "Pos({}, {})".format(self.char_position, self.word_position)
 
 def min_dist(xpositions, ypositions):
     d = 1337
@@ -49,6 +47,7 @@ def min_dist(xpositions, ypositions):
 
 
 class Index:
+
     def __init__(self, records):
         self.records = records
         self.index = {}
@@ -59,8 +58,8 @@ class Index:
         self._index(records)
 
     def tokenize(self, record):
-        words = re.split("\W+", record)
-        return words
+        #return re.split("\W+", record)
+        return [w for w in re.split("[-_/.?+&:\W]+|(\d+)", record) if w]
 
     def filter(self, token):
         return token.lower()
