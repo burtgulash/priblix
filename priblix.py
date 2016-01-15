@@ -2,6 +2,7 @@
 
 import sys
 import index
+import shutil
 
 def _find_getch():
     try:
@@ -37,6 +38,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     index_file = sys.argv[1]
+
+    term_size = shutil.get_terminal_size((80, 20))
     clear()
 
     records = []
@@ -49,12 +52,14 @@ if __name__ == "__main__":
     idx = index.Index(records)
     print("indexed %s records!" % n_records)
 
-    n = 30
+    n = term_size.lines + 1
+    for remaining_line in range(n - n_records):
+        print()
     for record in records[:n]:
         print(record)
+    print(">>")
 
     query = ""
-    print(">>")
     while True:
         c = getch()
         if c == "q":
@@ -63,14 +68,19 @@ if __name__ == "__main__":
             query = query[:-1]
         else:
             query += c
-        clear()
-        print(">>", query)
 
+        clear()
         if not query:
+            for remaining_line in range(n - n_records):
+                print()
             for record in records[:n]:
                 print(record)
         else:
             found = idx.search(query, fuzzy=True)
-            for d, wd, record in found[:n]:
+            for remaining_line in range(n - len(found)):
+                print()
+            for d, wd, record in found[:n][::-1]:
                 print(d, wd, record)
+
+        print(">>", query)
 

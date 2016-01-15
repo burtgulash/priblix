@@ -53,7 +53,7 @@ class Index:
         self.index = {}
         self.edits_lev = BKTree(levenshtein)
         self.edits_3 = BKTree(hamming)
-        self.prefixes = Trie()
+        self.word_trie = Trie()
 
         self._index(records)
 
@@ -103,18 +103,23 @@ class Index:
                     self.index[token] = []
                 self.index[token].append((doc_id, record_positions))
 
+                self.word_trie.insert(token)
                 for i in range(len(token)):
                     self.edits_lev.insert(token[:i + 1])
-                    self.prefixes.insert(token[:i + 1])
                 if len(token) >= 3:
                     self.edits_3.insert(token[:3])
 
     def _find_derived_words(self, word, is_prefix):
         # TODO lists to generators
         if len(word) <= 2:
-            return [(0, w) for w in self.prefixes.find(word, descendants=is_prefix)]
+            if is_prefix:
+                derived_words = [(0, w) for w in self.word_trie.descendants_or_self(word)]
+                return derived_words
+            else:
+                is_word = self.word_trie.find(word) is not None
+                return [(0, word)]
 
-        if len(word) == 3:
+        if is_prefix and len(word) == 3:
             derived_words = list(self.edits_3.find(word, 1))
         else:
             if len(word) <= 4:
@@ -129,7 +134,7 @@ class Index:
         if is_prefix:
             min_dists = {}
             for d, w in derived_words:
-                descs = self.prefixes.find(w, descendants=True)
+                descs = self.word_trie.descendants_or_self(w)
                 for desc in descs:
                     if desc not in min_dists:
                         min_dists[desc] = d
@@ -154,6 +159,7 @@ class Index:
 
     def _find_one_fuzzy(self, word, is_prefix=False):
         derived_words = self._find_derived_words(word, is_prefix)
+
         result = []
         for d, w in derived_words:
             for candidate in self._find_one(w, d):
@@ -177,13 +183,15 @@ class Index:
         if not tokens:
             return []
 
-        candidates = self._find_one_fuzzy(tokens[0], False)
-        for token in tokens[1:-1]:
-            new_candidates = self._find_one_fuzzy(token, False)
-            candidates = self._merge(candidates, new_candidates)
+        is_last_prefix = query[-1] != " "
+        candidates = self._find_one_fuzzy(tokens[0], is_prefix=is_last_prefix and len(tokens) == 1)
+        if len(tokens) > 1:
+            for token in tokens[1:-1]:
+                new_candidates = self._find_one_fuzzy(token, False)
+                candidates = self._merge(candidates, new_candidates)
 
-        last_candidates = self._find_one_fuzzy(tokens[-1], is_prefix=query[-1] != " ")
-        candidates = self._merge(candidates, last_candidates)
+            last_candidates = self._find_one_fuzzy(tokens[-1], is_prefix=is_last_prefix)
+            candidates = self._merge(candidates, last_candidates)
 
         return candidates
 
