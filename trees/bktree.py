@@ -17,6 +17,15 @@ def levenshtein(x, y):
                               d[i - 1][j - 1] + 1)
     return d[len(x)][len(y)]
 
+def hamming(x, y):
+    assert len(x) == len(y)
+    d = 0
+    for x_, y_ in zip(x, y):
+        if x_ != y_:
+            d += 1
+    return d
+
+
 
 class BKNode:
     def __init__(self, word):
@@ -44,32 +53,33 @@ class BKNode:
 
 
 class BKTree:
-    def __init__(self):
+    def __init__(self, distance_fn):
+        self.distance_fn = distance_fn
         self.roots = {}
 
-    def insert(self, word, distance_fn):
+    def insert(self, word):
         if not word:
             return
 
         initial = word[0]
         if initial in self.roots:
             cur = self.roots[initial]
-            d = distance_fn(cur.word, word)
+            d = self.distance_fn(cur.word, word)
             while d in cur.children:
                 if d == 0:
                     return
                 cur = cur.children[d]
-                d = distance_fn(cur.word, word)
+                d = self.distance_fn(cur.word, word)
             cur.add_child(word, d)
         else:
             self.roots[initial] = BKNode(word)
 
-    def find(self, word, distance_fn, limit):
+    def find(self, word, limit):
         if not word:
             return
         initial = word[0]
         if initial in self.roots:
-            yield from self.roots[initial].find(word, distance_fn, limit)
+            yield from self.roots[initial].find(word, self.distance_fn, limit)
 
     def print(self):
         for initial, root in self.roots.items():
@@ -79,14 +89,25 @@ class BKTree:
 
 
 if __name__ == "__main__":
-    t = BKTree()
+    t = BKTree(levenshtein)
     words = ["autobus", "auto", "amerka", "amero", "amora", "amkaro", "autaro", "autora", "aurora", "autari", "au", "auvejs", "autau",
             "bekadika", "beka", "betakaroten", "beta", "betynka"]
     for w in words:
-        t.insert(w, levenshtein)
+        t.insert(w)
 
     t.print()
 
-    search = t.find("amera", levenshtein, 1)
+    search = t.find("amera", 1)
     for s in search:
         print(s)
+
+    t = BKTree(hamming)
+    trigs = ["abc", "bca", "bbb", "abb", "bob", "abe", "acc", "cca", "aca", "cac", "cab", "aaa", "cae", "cea", "ace", "bce", "blb"]
+    for w in trigs:
+        t.insert(w)
+
+    t.print()
+    search = t.find("bob", 1)
+    for s in search:
+        print(s)
+
