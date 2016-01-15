@@ -40,7 +40,7 @@ class BKNode:
     def find(self, word, distance_fn, limit):
         d = distance_fn(self.word, word)
         if d <= limit:
-            yield self.word
+            yield d, self.word
         for x in range(d - limit, d + limit + 1):
             if x in self.children:
                 yield from self.children[x].find(word, distance_fn, limit)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     t.print()
 
-    search = t.find("amera", 1)
+    search = t.find("amera", 4)
     for s in search:
         print(s)
 

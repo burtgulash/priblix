@@ -19,18 +19,20 @@ class Trie:
     def __init__(self):
         self.root = TrieNode("", False)
 
-    def find(self, word):
+    def find(self, word, descendants=False):
         cur = self.root
         for i, c in enumerate(word):
             if c in cur.children:
                 cur = cur.children[c]
             else:
-                return None
+                return []
 
         if cur.is_word:
             assert cur.word == word
-            return cur
-        return None
+            if descendants:
+                return list(cur.descendants_or_self())
+            return [cur.word]
+        return []
 
     def insert(self, word):
         cur = self.root
@@ -79,5 +81,5 @@ if __name__ == "__main__":
     t.insert("a")
     t.insert("au")
     print(t)
-    for x in t.find("a").descendants_or_self():
+    for x in t.find("a", descendants=True):
         print(x)

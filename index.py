@@ -2,12 +2,14 @@
 
 import collections
 import re
-import trees.bktree
+from trees.bktree import BKTree, levenshtein, hamming
+from trees.trie import Trie
 
 
 class Candidate:
-    def __init__(self, doc_id, word_occurrences, highlights):
+    def __init__(self, doc_id, edit_distance, word_occurrences, highlights):
         self.doc_id = doc_id
+        self.edit_distance = edit_distance
         self.last_occurrences = word_occurrences
         self.min_dist = 0
         self.highlights = highlights
@@ -50,7 +52,9 @@ class Index:
     def __init__(self, records):
         self.records = records
         self.index = {}
-        self.edits = trees.bktree.BKTree()
+        self.edits_lev = BKTree(levenshtein)
+        self.edits_3 = BKTree(hamming)
+        self.prefixes = Trie()
 
         self._index(records)
 
@@ -73,10 +77,16 @@ class Index:
             char_i += len(token)
         return terms
 
-    def search(self, query):
-        candidates = self._find_phrase(query)
+    def search(self, query, fuzzy=False):
+        if fuzzy:
+            candidates = self._find_phrase_fuzzy(query)
+        else:
+            candidates = self._find_phrase(query)
+
         highlighted_docs = self.retrieve_records_and_highlight(candidates)
-        return sorted(highlighted_docs)
+        highlighted_docs.sort()
+
+        return highlighted_docs
 
 
     def _group_occurrences(self, occurrences):
@@ -93,9 +103,44 @@ class Index:
                 if token not in self.index:
                     self.index[token] = []
                 self.index[token].append((doc_id, record_positions))
-                self.edits.insert(token, trees.bktree.levenshtein)
 
-    def _find_one(self, word):
+                for i in range(len(token)):
+                    self.edits_lev.insert(token[:i + 1])
+                    self.prefixes.insert(token[:i + 1])
+                if len(token) >= 3:
+                    self.edits_3.insert(token[:3])
+
+    def _find_derived_words(self, word, is_prefix):
+        # TODO lists to generators
+        if len(word) <= 2:
+            return [(0, w) for w in self.prefixes.find(word, descendants=is_prefix)]
+
+        if len(word) == 3:
+            derived_words = list(self.edits_3.find(word, 1))
+        else:
+            if len(word) <= 4:
+                d = 1
+            elif len(word) <= 8:
+                d = 2
+            else:
+                d = 3
+
+            derived_words = list(self.edits_lev.find(word, d))
+
+        if is_prefix:
+            min_dists = {}
+            for d, w in derived_words:
+                descs = self.prefixes.find(w, descendants=True)
+                for desc in descs:
+                    if desc not in min_dists:
+                        min_dists[desc] = d
+                    else:
+                        min_dists[desc] = min(min_dists[desc], d)
+            derived_words = [(d, desc) for desc, d in min_dists.items()]
+
+        return derived_words
+
+    def _find_one(self, word, edit_distance):
         docs_found = self.index.get(word, [])
         result = []
         for doc_id, record_positions in docs_found:
@@ -103,7 +148,17 @@ class Index:
                 (rp.char_position, rp.char_position + len(word))
                 for rp in record_positions
             ]
-            result.append(Candidate(doc_id, record_positions, highlights))
+            cnd = Candidate(doc_id, edit_distance, record_positions, highlights)
+            result.append(cnd)
+
+        return result
+
+    def _find_one_fuzzy(self, word, is_prefix=False):
+        derived_words = self._find_derived_words(word, is_prefix)
+        result = []
+        for d, w in derived_words:
+            for candidate in self._find_one(w, d):
+                result.append(candidate)
         return result
 
     def _find_phrase(self, query):
@@ -111,10 +166,25 @@ class Index:
         if not tokens:
             return []
 
-        candidates = self._find_one(tokens[0])
+        candidates = self._find_one(tokens[0], 0)
         for token in tokens[1:]:
-            new_candidates = self._find_one(token)
+            new_candidates = self._find_one(token, 0)
             candidates = self._merge(candidates, new_candidates)
+
+        return candidates
+
+    def _find_phrase_fuzzy(self, query):
+        tokens = self.tokenize(query)
+        if not tokens:
+            return []
+
+        candidates = self._find_one_fuzzy(tokens[0], False)
+        for token in tokens[1:-1]:
+            new_candidates = self._find_one_fuzzy(token, False)
+            candidates = self._merge(candidates, new_candidates)
+
+        last_candidates = self._find_one_fuzzy(tokens[-1], is_prefix=query[-1] != " ")
+        candidates = self._merge(candidates, last_candidates)
 
         return candidates
 
@@ -130,7 +200,9 @@ class Index:
             else:
                 xpositions = cndx.last_occurrences
                 ypositions = cndy.last_occurrences
-                c = Candidate(cndx.doc_id, ypositions, cndx.highlights + cndy.highlights)
+                edit_distance = cndx.edit_distance + cndy.edit_distance
+
+                c = Candidate(cndx.doc_id, edit_distance, ypositions, cndx.highlights + cndy.highlights)
                 c.min_dist = cndx.min_dist + min_dist(xpositions, ypositions)
                 cs.append(c)
                 ix, iy = ix + 1, iy + 1
@@ -176,7 +248,7 @@ class Index:
             record = self.records[candidate.doc_id]
             highlights = self._merge_highlights(candidate.highlights)
             highlighted_record = self._highlight_record(record, highlights)
-            r.append( (candidate.min_dist, highlighted_record) )
+            r.append( (candidate.edit_distance, candidate.min_dist, highlighted_record) )
         return r
 
 
@@ -229,6 +301,6 @@ if __name__ == "__main__":
     ]
 
     index = Index(records)
-    found = index.search("taky mi")
-    for score, f in found:
-        print(score, f)
+    found = index.search("taky i vysralis si", fuzzy=True)
+    for edits, wd, f in found:
+        print(edits, wd, f)
