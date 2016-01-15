@@ -54,6 +54,7 @@ class Index:
         self.edits_lev = BKTree(levenshtein)
         self.edits_3 = BKTree(hamming)
         self.word_trie = Trie()
+        self.prefixes = Trie()
 
         self._index(records)
 
@@ -104,8 +105,14 @@ class Index:
                 self.index[token].append((doc_id, record_positions))
 
                 self.word_trie.insert(token)
-                for i in range(len(token)):
-                    self.edits_lev.insert(token[:i + 1])
+                for i in range(1, len(token)):
+                    prefix = token[:i + 1]
+                    # TODO merge prefix trie with word trie
+                    if prefix not in self.prefixes:
+                        self.prefixes.insert(prefix)
+                        self.edits_lev.insert(prefix)
+                print(len(self.edits_lev))
+                print(len(self.prefixes))
                 if len(token) >= 3:
                     self.edits_3.insert(token[:3])
 
@@ -116,7 +123,7 @@ class Index:
                 derived_words = [(0, w) for w in self.word_trie.descendants_or_self(word)]
                 return derived_words
             else:
-                is_word = self.word_trie.find(word) is not None
+                is_word = word in self.word_trie
                 return [(0, word)]
 
         if is_prefix and len(word) == 3:
@@ -124,7 +131,7 @@ class Index:
         else:
             if len(word) <= 4:
                 d = 1
-            elif len(word) <= 8:
+            elif len(word) <= 7:
                 d = 2
             else:
                 d = 3
@@ -144,12 +151,12 @@ class Index:
 
         return derived_words
 
-    def _find_one(self, word, edit_distance):
+    def _find_one(self, word, prefix, edit_distance):
         docs_found = self.index.get(word, [])
         result = []
         for doc_id, record_positions in docs_found:
             highlights = [
-                (rp.char_position, rp.char_position + len(word))
+                (rp.char_position, rp.char_position + len(prefix))
                 for rp in record_positions
             ]
             cnd = Candidate(doc_id, edit_distance, record_positions, highlights)
@@ -159,10 +166,11 @@ class Index:
 
     def _find_one_fuzzy(self, word, is_prefix=False):
         derived_words = self._find_derived_words(word, is_prefix)
+        print(derived_words)
 
         result = []
         for d, w in derived_words:
-            for candidate in self._find_one(w, d):
+            for candidate in self._find_one(w, word, d):
                 result.append(candidate)
         return result
 
@@ -171,9 +179,9 @@ class Index:
         if not tokens:
             return []
 
-        candidates = self._find_one(tokens[0], 0)
+        candidates = self._find_one(tokens[0], tokens[0], 0)
         for token in tokens[1:]:
-            new_candidates = self._find_one(token, 0)
+            new_candidates = self._find_one(token, token, 0)
             candidates = self._merge(candidates, new_candidates)
 
         return candidates

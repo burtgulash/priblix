@@ -18,6 +18,7 @@ class Trie:
 
     def __init__(self):
         self.root = TrieNode("", False)
+        self.size = 0
 
     def descendants_or_self(self, prefix):
         cur = self.root
@@ -30,6 +31,9 @@ class Trie:
         return list(cur.descendants_or_self())
 
     def find(self, word):
+        if not word:
+            return None
+
         cur = self.root
         for i, c in enumerate(word):
             if c in cur.children:
@@ -43,7 +47,13 @@ class Trie:
 
         return None
 
+    def __contains__(self, word):
+        return self.find(word) is not None
+
     def insert(self, word):
+        if not word:
+            return
+
         cur = self.root
         for i, c in enumerate(word[:-1]):
             if c in cur.children:
@@ -61,6 +71,11 @@ class Trie:
             cur.children[last_char].word = word
         else:
             cur.children[last_char] = TrieNode(word, True)
+
+        self.size += 1
+
+    def __len__(self):
+        return self.size
 
     def __str__(self):
         s = []

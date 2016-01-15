@@ -56,6 +56,7 @@ class BKTree:
     def __init__(self, distance_fn):
         self.distance_fn = distance_fn
         self.roots = {}
+        self.size = 0
 
     def insert(self, word):
         if not word:
@@ -73,6 +74,10 @@ class BKTree:
             cur.add_child(word, d)
         else:
             self.roots[initial] = BKNode(word)
+            self.size += 1
+
+    def __len__(self):
+        return self.size
 
     def find(self, word, limit):
         if not word:
