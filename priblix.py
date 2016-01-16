@@ -76,7 +76,7 @@ if __name__ == "__main__":
             for record in records[:n]:
                 print(record)
         else:
-            found = idx.search(query, fuzzy=True)
+            found = list(idx.search(query, topn=n-1, fuzzy=True))
             for remaining_line in range(n - len(found)):
                 print()
             for d, wd, record in found[:n][::-1]:

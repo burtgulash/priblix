@@ -81,16 +81,20 @@ class Index:
             char_i += len(token)
         return terms
 
-    def search(self, query, fuzzy=False):
+    def search(self, query, topn=10, fuzzy=False):
         if fuzzy:
             candidates = self._find_phrase_fuzzy(query)
         else:
             candidates = self._find_phrase(query)
 
-        highlighted_docs = self.retrieve_records_and_highlight(candidates)
-        highlighted_docs.sort(key=lambda x: x[1])
+        candidates.sort(key=lambda c: (c.edit_distance, c.min_dist))
+        candidates = candidates[:topn]
 
-        return highlighted_docs
+        for c in candidates:
+            record = self.records[c.doc_id]
+            highlights = self._merge_highlights(c.highlights)
+            highlighted_record = self._highlight_record(record, highlights)
+            yield (c.edit_distance, c.min_dist, highlighted_record)
 
 
     def _group_occurrences(self, occurrences):
@@ -171,6 +175,19 @@ class Index:
         for d, w in derived_words:
             candidates = self._find_one(w, word, d)
             result.extend(candidates)
+
+        d = collections.defaultdict(list)
+        for cnd in result:
+            d[cnd.doc_id].append(cnd)
+
+        # group candidates by doc_id
+        result = []
+        for doc_id, cnds in d.items():
+            edit_distance = min(c.edit_distance for c in cnds)
+            last_occurrences = sum([c.last_occurrences for c in cnds], []) # TODO remove duplicate occurrences? are there any?
+            highlights = sum([c.highlights for c in cnds], [])
+            c = Candidate(doc_id, edit_distance, last_occurrences, highlights)
+            result.append(c)
 
         result.sort(key=lambda cnd: cnd.doc_id)
 
@@ -256,10 +273,10 @@ class Index:
         result.append(record[end:])
         return "".join(result)
 
-    def retrieve_records_and_highlight(self, candidates):
+    def _highlight_candidates(self, candidates):
         r = []
         for candidate in candidates:
-            record = self.records[candidate.doc_id]
+            #record = self.records[candidate.doc_id]
             highlights = self._merge_highlights(candidate.highlights)
             highlighted_record = self._highlight_record(record, highlights)
             r.append( (candidate.edit_distance, candidate.min_dist, highlighted_record) )
