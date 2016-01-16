@@ -121,18 +121,15 @@ class Index:
                 self.index[token].append((doc_id, record_positions))
 
     def _find_derived_words(self, word, is_prefix):
-        # TODO lists to generators
-        if len(word) <= 2:
-            if is_prefix:
-                derived_words = [(0, w) for w in self.word_trie.descendants_or_self(word)]
-                return derived_words
-            else:
-                is_word = word in self.word_trie
-                return [(0, word)]
+        use_levenshtein = True
+        if is_prefix:
+            if len(word) <= 2:
+                return ((0, w) for w in self.word_trie.descendants_or_self(word))
+            if len(word) == 3:
+                derived_words = self.edits_3.find(word, 1)
+                use_levenshtein = False
 
-        if is_prefix and len(word) == 3:
-            derived_words = list(self.edits_3.find(word, 1))
-        else:
+        if use_levenshtein:
             if len(word) <= 4:
                 d = 1
             elif len(word) <= 7:
@@ -140,7 +137,7 @@ class Index:
             else:
                 d = 3
 
-            derived_words = list(self.edits_lev.find(word, d))
+            derived_words = self.edits_lev.find(word, d)
 
         if is_prefix:
             min_dists = {}
@@ -151,7 +148,7 @@ class Index:
                         min_dists[desc] = d
                     else:
                         min_dists[desc] = min(min_dists[desc], d)
-            derived_words = [(d, desc) for desc, d in min_dists.items()]
+            derived_words = ((d, desc) for desc, d in min_dists.items())
 
         return derived_words
 
