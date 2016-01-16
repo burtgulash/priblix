@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 class TrieNode:
+    # TODO remove self.word from node
     __slots__ = "word", "is_word", "children"
 
     def __init__(self, word, is_word):

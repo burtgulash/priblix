@@ -28,6 +28,8 @@ def hamming(x, y):
 
 
 class BKNode:
+    __slots__ = "word", "children"
+
     def __init__(self, word):
         self.word = word
         self.children = {}

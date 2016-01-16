@@ -138,6 +138,7 @@ class Index:
                 d = 3
 
             derived_words = self.edits_lev.find(word, d)
+            # TODO check case: d == 1
 
         if is_prefix:
             min_dists = {}
