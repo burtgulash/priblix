@@ -54,7 +54,6 @@ class Index:
         self.edits_lev = BKTree(levenshtein)
         self.edits_3 = BKTree(hamming)
         self.word_trie = Trie()
-        self.prefixes = Trie()
 
         self._index(records)
 
@@ -104,17 +103,15 @@ class Index:
                     self.index[token] = []
                 self.index[token].append((doc_id, record_positions))
 
-                self.word_trie.insert(token)
                 for i in range(1, len(token)):
                     prefix = token[:i + 1]
-                    # TODO merge prefix trie with word trie
-                    if prefix not in self.prefixes:
-                        self.prefixes.insert(prefix)
+                    if not self.word_trie.is_prefix(prefix):
                         self.edits_lev.insert(prefix)
                 print(len(self.edits_lev))
-                print(len(self.prefixes))
+                print(len(self.word_trie))
                 if len(token) >= 3:
                     self.edits_3.insert(token[:3])
+                self.word_trie.insert(token)
 
     def _find_derived_words(self, word, is_prefix):
         # TODO lists to generators

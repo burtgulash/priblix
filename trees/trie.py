@@ -30,6 +30,19 @@ class Trie:
 
         return list(cur.descendants_or_self())
 
+    def is_prefix(self, prefix):
+        if not prefix:
+            return False
+
+        cur = self.root
+        for i, c in enumerate(prefix):
+            if c in cur.children:
+                cur = cur.children[c]
+            else:
+                return False
+
+        return True
+
     def find(self, word):
         if not word:
             return None
