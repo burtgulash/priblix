@@ -58,6 +58,8 @@ class Index:
         self.edits_3 = BKTree(hamming)
         self.word_trie = Trie()
 
+        self.word_set = set()
+
         self._index(records)
 
     def tokenize(self, record):
@@ -86,7 +88,7 @@ class Index:
             candidates = self._find_phrase(query)
 
         highlighted_docs = self.retrieve_records_and_highlight(candidates)
-        highlighted_docs.sort()
+        highlighted_docs.sort(key=lambda x: x[1])
 
         return highlighted_docs
 
@@ -102,17 +104,17 @@ class Index:
             tokens = self.tokenize(record)
             occurrences = self.add_token_offsets(record, tokens)
             for token, record_positions in self._group_occurrences(occurrences).items():
-                if token not in self.index:
-                    self.index[token] = []
-                self.index[token].append((doc_id, record_positions))
-
                 for i in range(1, len(token)):
                     prefix = token[:i + 1]
                     if not self.word_trie.is_prefix(prefix):
                         self.edits_lev.insert(prefix)
-                if len(token) >= 3:
-                    self.edits_3.insert(token[:3])
-                self.word_trie.insert(token)
+                        if len(prefix) == 3:
+                            self.edits_3.insert(prefix)
+
+                if token not in self.index:
+                    self.word_trie.insert(token)
+                    self.index[token] = []
+                self.index[token].append((doc_id, record_positions))
 
     def _find_derived_words(self, word, is_prefix):
         # TODO lists to generators
