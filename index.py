@@ -16,6 +16,9 @@ class Candidate:
         self.min_dist = 0
         self.highlights = highlights
 
+    def __repr__(self):
+        return "Cand({}, {})".format(self.doc_id, self.edit_distance)
+
 class RecordPosition:
     __slots__ = "char_position", "word_position"
 
@@ -107,8 +110,6 @@ class Index:
                     prefix = token[:i + 1]
                     if not self.word_trie.is_prefix(prefix):
                         self.edits_lev.insert(prefix)
-                print(len(self.edits_lev))
-                print(len(self.word_trie))
                 if len(token) >= 3:
                     self.edits_3.insert(token[:3])
                 self.word_trie.insert(token)
@@ -163,12 +164,14 @@ class Index:
 
     def _find_one_fuzzy(self, word, is_prefix=False):
         derived_words = self._find_derived_words(word, is_prefix)
-        print(derived_words)
 
         result = []
         for d, w in derived_words:
-            for candidate in self._find_one(w, word, d):
-                result.append(candidate)
+            candidates = self._find_one(w, word, d)
+            result.extend(candidates)
+
+        result.sort(key=lambda cnd: cnd.doc_id)
+
         return result
 
     def _find_phrase(self, query):
@@ -188,15 +191,12 @@ class Index:
         if not tokens:
             return []
 
+
         is_last_prefix = query[-1] != " "
         candidates = self._find_one_fuzzy(tokens[0], is_prefix=is_last_prefix and len(tokens) == 1)
-        if len(tokens) > 1:
-            for token in tokens[1:-1]:
-                new_candidates = self._find_one_fuzzy(token, False)
-                candidates = self._merge(candidates, new_candidates)
-
-            last_candidates = self._find_one_fuzzy(tokens[-1], is_prefix=is_last_prefix)
-            candidates = self._merge(candidates, last_candidates)
+        for i, token in enumerate(tokens[1:]):
+            new_candidates = self._find_one_fuzzy(token, is_prefix=is_last_prefix and i == len(tokens) - 2)
+            candidates = self._merge(candidates, new_candidates)
 
         return candidates
 
